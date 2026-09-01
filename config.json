@@ -1,0 +1,5 @@
+{
+    "label": "Calendar",
+    "icon": "icon.png",
+    "launch": "launch.sh"
+}
