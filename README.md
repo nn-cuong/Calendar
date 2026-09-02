@@ -1,6 +1,6 @@
 # Calendar App
 
-Một ứng dụng lịch (Calendar) mã nguồn mở, được thiết kế và tối ưu đặc biệt cho các hệ máy chơi game cầm tay (như Trimui Brick Pro, TrimUI Smart Pro).
+Một ứng dụng lịch (Calendar) mã nguồn mở, được tối ưu hóa đặc biệt cho Trimui Brick Pro.
 
 ## 🌟 Tính năng chính
 - Xem lịch theo tháng rõ ràng, trực quan.
