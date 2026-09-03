@@ -9,17 +9,12 @@ Một ứng dụng lịch vạn niên & đồng hồ kỹ thuật số (Desktop 
 - **Xem lịch tháng trực quan & chuẩn xác:** Bố cục hiển thị tỷ lệ 4:3 sắc nét trên màn hình 1024×768, phân chia rõ ràng ngày trong tuần, Thứ Bảy (xanh dương dịu) và Chủ Nhật (đỏ đất vintage).
 - **Tích hợp song song Âm Lịch & Dương Lịch:**
   - Tích hợp thuật toán tính Âm lịch Việt Nam chuẩn xác cao của tác giả Hồ Ngọc Đức.
-  - Hiển thị ngày Dương to rõ kèm số ngày Âm lịch tinh tế ngay dưới từng ô ngày.
   - Phím tắt **Nút X** cho phép chuyển đổi chế độ ưu tiên tiêu đề giữa **SOLAR (Dương lịch)** và **LUNAR (Âm lịch)**.
 - **4 Bộ chủ đề màu sắc Retro Palettes:**
   1. **Original** *(Mặc định)* — Tông giấy ngà vintage thanh nhã, ấm áp hoài cổ.
   2. **Midnight** — Tông xanh navy than chì huyền bí, dịu mắt và hiện đại.
   3. **Warm Paper** — Màu giấy kem ngả vàng mộc mạc như lịch để bàn truyền thống.
   4. **Forest** — Sắc xanh rêu tự nhiên tạo cảm giác thư thái, dễ chịu.
-  - Chuyển đổi tuần hoàn giữa 4 theme bằng **Nút Y**. Cấu hình theme được tự động ghi nhớ trong `saves.json`.
-- **Đánh dấu ngày thông minh:** Ô ngày hôm nay (Today) được bao viền vàng nổi bật; con trỏ chọn ngày xanh lam di chuyển linh hoạt.
-- **Phím tắt về ngày hiện tại:** Bấm **Nút A** để ngay lập tức đưa con trỏ trở về ngày hôm nay từ bất kỳ năm/tháng nào.
-- **Điều khiển siêu mượt:** Đồng bộ hoàn toàn D-pad và cần gạt Analog Joystick, hỗ trợ giữ lì nút (hold-to-repeat) để lướt qua các tuần/ngày mà không bị giật trễ.
 - **Thoát an toàn:** Bấm **START** mở popup xác nhận để tránh thoát ngoài ý muốn.
 
 ---
