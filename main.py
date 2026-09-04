@@ -506,7 +506,7 @@ def main():
 
             # Footer
             mode_str = "[Solar]" if view_mode == MODE_SOLAR else "[Lunar]"
-            footer = f"L/R: Month | L2/R2: Year | D-Pad: Move | X: {mode_str} | Y: Theme | A: Today | START: Exit"
+            footer = f"L/R: Month | L2/R2: Year | DPAD: Move | X: {mode_str} | Y: Theme | A: Today | START: Exit"
             tex, tw, th = render_text(footer, font_small, theme["text_dim"])
             if tex:
                 sdl2.SDL_RenderCopy(renderer.sdlrenderer, tex, None, sdl2.SDL_Rect(20, w_h - 40, tw, th))
