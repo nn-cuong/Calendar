@@ -141,14 +141,41 @@ def main():
     else:
         sys.exit(1)
 
-    def render_text(text, font, color):
-        tsurf = sdlttf.TTF_RenderUTF8_Blended(font, text.encode('utf-8'), color)
-        if tsurf:
-            ttex = sdl2.SDL_CreateTextureFromSurface(renderer.sdlrenderer, tsurf)
-            w, h = tsurf.contents.w, tsurf.contents.h
+    # High-Performance Text Texture LRU Cache
+    text_texture_cache = {}
+    MAX_TEXT_CACHE = 250
+
+    def draw_text(text, font, x, y, color, center_x=False, center_y=False):
+        if not text:
+            return 0, 0
+        r, g, b, a = color.r, color.g, color.b, color.a
+        key = (text, id(font), r, g, b, a)
+        cached = text_texture_cache.get(key)
+        if cached:
+            tex, w, h = cached[0], cached[1], cached[2]
+        else:
+            tsurf = sdlttf.TTF_RenderUTF8_Blended(font, text.encode('utf-8'), color)
+            if not tsurf:
+                return 0, 0
+            w = tsurf.contents.w
+            h = tsurf.contents.h
+            tex = sdl2.SDL_CreateTextureFromSurface(renderer.sdlrenderer, tsurf)
             sdl2.SDL_FreeSurface(tsurf)
-            return ttex, w, h
-        return None, 0, 0
+            if not tex:
+                return 0, 0
+            if len(text_texture_cache) >= MAX_TEXT_CACHE:
+                old_keys = list(text_texture_cache.keys())[:50]
+                for ok in old_keys:
+                    item = text_texture_cache.pop(ok, None)
+                    if item and item[0]:
+                        sdl2.SDL_DestroyTexture(item[0])
+            text_texture_cache[key] = (tex, w, h)
+
+        dest_x = x - (w // 2) if center_x else x
+        dest_y = y - (h // 2) if center_y else y
+        dest = sdl2.SDL_Rect(dest_x, dest_y, w, h)
+        sdl2.SDL_RenderCopy(renderer.sdlrenderer, tex, None, dest)
+        return w, h
 
     def get_days_in_month(year, month):
         return 29 if month == 2 and year % 4 == 0 and (year % 100 != 0 or year % 400 == 0) else (28 if month == 2 else (30 if month in (4, 6, 9, 11) else 31))
@@ -201,24 +228,27 @@ def main():
     dpad_timer_h = 0
 
     def nav_up():
-        nonlocal cursor_day
+        nonlocal cursor_day, needs_redraw
         cursor_day = max(1, cursor_day - 7)
+        needs_redraw = True
 
     def nav_down():
-        nonlocal cursor_day
+        nonlocal cursor_day, needs_redraw
         cursor_day = min(get_days_in_month(cur_year, cur_month), cursor_day + 7)
+        needs_redraw = True
 
     def nav_left():
-        nonlocal cursor_day
+        nonlocal cursor_day, needs_redraw
         cursor_day = max(1, cursor_day - 1)
+        needs_redraw = True
 
     def nav_right():
-        nonlocal cursor_day
+        nonlocal cursor_day, needs_redraw
         cursor_day = min(get_days_in_month(cur_year, cur_month), cursor_day + 1)
-
-    while running:
         needs_redraw = True
-        
+
+    needs_redraw = True
+    while running:
         # Poll Joystick Axes
         axis_up = False
         axis_down = False
@@ -303,9 +333,6 @@ def main():
         prev_axis_right = axis_right
         
         events = sdl2.ext.get_events()
-        if len(events) > 0:
-            needs_redraw = True
-            
         for event in events:
             if event.type == sdl2.SDL_QUIT:
                 running = False
@@ -313,9 +340,11 @@ def main():
                 sym = event.key.keysym.sym
                 if sym == sdl2.SDLK_x:
                     view_mode = MODE_LUNAR if view_mode == MODE_SOLAR else MODE_SOLAR
+                    needs_redraw = True
                 elif sym == sdl2.SDLK_y:
                     theme_idx = (theme_idx + 1) % len(CALENDAR_THEMES)
                     write_theme_idx(theme_idx)
+                    needs_redraw = True
             elif event.type == sdl2.SDL_CONTROLLERBUTTONUP:
                 btn = event.cbutton.button
                 if btn == sdl2.SDL_CONTROLLER_BUTTON_DPAD_UP: dpad_up_held = False
@@ -329,20 +358,24 @@ def main():
                         running = False
                     elif btn == sdl2.SDL_CONTROLLER_BUTTON_A: # Physical B - Cancel
                         show_quit_confirm = False
+                        needs_redraw = True
                 elif btn == sdl2.SDL_CONTROLLER_BUTTON_START:
                     show_quit_confirm = True
+                    needs_redraw = True
                 elif btn == sdl2.SDL_CONTROLLER_BUTTON_LEFTSHOULDER:
                     cur_month -= 1
                     if cur_month < 1:
                         cur_month = 12
                         cur_year -= 1
                     cursor_day = min(cursor_day, get_days_in_month(cur_year, cur_month))
+                    needs_redraw = True
                 elif btn == sdl2.SDL_CONTROLLER_BUTTON_RIGHTSHOULDER:
                     cur_month += 1
                     if cur_month > 12:
                         cur_month = 1
                         cur_year += 1
                     cursor_day = min(cursor_day, get_days_in_month(cur_year, cur_month))
+                    needs_redraw = True
                 elif btn == sdl2.SDL_CONTROLLER_BUTTON_DPAD_UP:
                     dpad_up_held = True
                     dpad_timer_v = 0
@@ -364,17 +397,22 @@ def main():
                     cur_year = now_t.year
                     cur_month = now_t.month
                     cursor_day = now_t.day
+                    needs_redraw = True
                 elif btn == sdl2.SDL_CONTROLLER_BUTTON_Y: # Physical X on TrimUI - Solar / Lunar
                     view_mode = MODE_LUNAR if view_mode == MODE_SOLAR else MODE_SOLAR
+                    needs_redraw = True
                 elif btn == sdl2.SDL_CONTROLLER_BUTTON_X: # Physical Y on TrimUI - Theme Switch
                     theme_idx = (theme_idx + 1) % len(CALENDAR_THEMES)
                     write_theme_idx(theme_idx)
+                    needs_redraw = True
                 elif btn == sdl2.SDL_CONTROLLER_BUTTON_LEFTSTICK: # Fallback L2 on some TrimUI CFW
                     cur_year -= 1
                     cursor_day = min(cursor_day, get_days_in_month(cur_year, cur_month))
+                    needs_redraw = True
                 elif btn == sdl2.SDL_CONTROLLER_BUTTON_RIGHTSTICK: # Fallback R2 on some TrimUI CFW
                     cur_year += 1
                     cursor_day = min(cursor_day, get_days_in_month(cur_year, cur_month))
+                    needs_redraw = True
             elif event.type == sdl2.SDL_CONTROLLERAXISMOTION:
                 axis = event.caxis.axis
                 val = event.caxis.value
@@ -383,6 +421,7 @@ def main():
                         l2_pressed = True
                         cur_year -= 1
                         cursor_day = min(cursor_day, get_days_in_month(cur_year, cur_month))
+                        needs_redraw = True
                     elif val <= 16000:
                         l2_pressed = False
                 elif axis == sdl2.SDL_CONTROLLER_AXIS_TRIGGERRIGHT:
@@ -390,6 +429,7 @@ def main():
                         r2_pressed = True
                         cur_year += 1
                         cursor_day = min(cursor_day, get_days_in_month(cur_year, cur_month))
+                        needs_redraw = True
                     elif val <= 16000:
                         r2_pressed = False
 
@@ -412,11 +452,8 @@ def main():
                 header_color = theme["lunar"]
                 sdlttf.TTF_SetFontStyle(font_large, sdlttf.TTF_STYLE_BOLD)
                 
-            tex, tw, th = render_text(header, font_large, header_color)
+            draw_text(header, font_large, w_w//2, 40 + 24, header_color, center_x=True, center_y=True)
             sdlttf.TTF_SetFontStyle(font_large, sdlttf.TTF_STYLE_NORMAL)
-            if tex:
-                sdl2.SDL_RenderCopy(renderer.sdlrenderer, tex, None, sdl2.SDL_Rect(w_w//2 - tw//2, 40, tw, th))
-                sdl2.SDL_DestroyTexture(tex)
                 
             # Draw Weekdays
             cell_w = 120
@@ -426,10 +463,7 @@ def main():
             
             for i, wd in enumerate(weekdays):
                 color = theme["sunday"] if i == 6 else (theme["saturday"] if i == 5 else theme["header"])
-                tex, tw, th = render_text(wd, font_medium, color)
-                if tex:
-                    sdl2.SDL_RenderCopy(renderer.sdlrenderer, tex, None, sdl2.SDL_Rect(start_x + i * cell_w + cell_w//2 - tw//2, start_y + 10, tw, th))
-                    sdl2.SDL_DestroyTexture(tex)
+                draw_text(wd, font_medium, start_x + i * cell_w + cell_w//2, start_y + 10 + 16, color, center_x=True, center_y=True)
                     
             # Draw Days
             start_y += 70
@@ -491,26 +525,16 @@ def main():
                             
                         prim_font = font_medium
                         sec_font = font_medium
-                        prim_y = by + 2
-                        sec_y = by + 37
+                        prim_y = by + 2 + 16
+                        sec_y = by + 37 + 16
                         
-                        ptex, ptw, pth = render_text(prim_str, prim_font, prim_color)
-                        if ptex:
-                            sdl2.SDL_RenderCopy(renderer.sdlrenderer, ptex, None, sdl2.SDL_Rect(bx + cell_w//2 - ptw//2, prim_y, ptw, pth))
-                            sdl2.SDL_DestroyTexture(ptex)
-                            
-                        stex, stw, sth = render_text(sec_str, sec_font, sec_color)
-                        if stex:
-                            sdl2.SDL_RenderCopy(renderer.sdlrenderer, stex, None, sdl2.SDL_Rect(bx + cell_w//2 - stw//2, sec_y, stw, sth))
-                            sdl2.SDL_DestroyTexture(stex)
+                        draw_text(prim_str, prim_font, bx + cell_w//2, prim_y, prim_color, center_x=True, center_y=True)
+                        draw_text(sec_str, sec_font, bx + cell_w//2, sec_y, sec_color, center_x=True, center_y=True)
 
             # Footer
             mode_str = "[Solar]" if view_mode == MODE_SOLAR else "[Lunar]"
             footer = f"L/R: Month | L2/R2: Year | DPAD: Move | X: {mode_str} | Y: Theme | A: Today | START: Exit"
-            tex, tw, th = render_text(footer, font_small, theme["text_dim"])
-            if tex:
-                sdl2.SDL_RenderCopy(renderer.sdlrenderer, tex, None, sdl2.SDL_Rect(20, w_h - 40, tw, th))
-                sdl2.SDL_DestroyTexture(tex)
+            draw_text(footer, font_small, 20, w_h - 40, theme["text_dim"])
 
             if show_quit_confirm:
                 sdl2.SDL_SetRenderDrawBlendMode(renderer.sdlrenderer, sdl2.SDL_BLENDMODE_BLEND)
@@ -523,22 +547,17 @@ def main():
                 renderer.fill((pop_x, pop_y, pop_w, pop_h), theme["sel_border"])
                 renderer.fill((pop_x+2, pop_y+2, pop_w-4, pop_h-4), theme["bg"])
                 
-                msg = "Exit Calendar?"
-                tex, tw, th = render_text(msg, font_large, theme["text"])
-                if tex:
-                    sdl2.SDL_RenderCopy(renderer.sdlrenderer, tex, None, sdl2.SDL_Rect(pop_x + pop_w//2 - tw//2, pop_y + 40, tw, th))
-                    sdl2.SDL_DestroyTexture(tex)
-                
-                msg2 = "A: Confirm   B: Cancel"
-                tex, tw, th = render_text(msg2, font_medium, theme["text_dim"])
-                if tex:
-                    sdl2.SDL_RenderCopy(renderer.sdlrenderer, tex, None, sdl2.SDL_Rect(pop_x + pop_w//2 - tw//2, pop_y + 120, tw, th))
-                    sdl2.SDL_DestroyTexture(tex)
+                draw_text("Exit Calendar?", font_large, pop_x + pop_w//2, pop_y + 40 + 24, theme["text"], center_x=True, center_y=True)
+                draw_text("A: Confirm   B: Cancel", font_medium, pop_x + pop_w//2, pop_y + 120 + 16, theme["text_dim"], center_x=True, center_y=True)
 
             renderer.present()
             needs_redraw = False
             
-        sdl2.SDL_Delay(16)
+        sdl2.SDL_Delay(16 if needs_redraw else 33)
+
+    for item in text_texture_cache.values():
+        if item and item[0]:
+            sdl2.SDL_DestroyTexture(item[0])
 
     sdlttf.TTF_CloseFont(font_large)
     sdlttf.TTF_CloseFont(font_medium)
