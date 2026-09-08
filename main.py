@@ -596,10 +596,13 @@ def main():
                 pop_x, pop_y = (w_w - pop_w)//2, (w_h - pop_h)//2
                 
                 renderer.fill((pop_x, pop_y, pop_w, pop_h), theme["sel_border"])
-                renderer.fill((pop_x+2, pop_y+2, pop_w-4, pop_h-4), theme["bg"])
+                renderer.fill((pop_x + 2, pop_y + 2, pop_w - 4, pop_h - 4), theme["bg"])
                 
+                sdlttf.TTF_SetFontStyle(font_large, sdlttf.TTF_STYLE_BOLD)
                 draw_text("Exit Calendar?", font_large, pop_x + pop_w//2, pop_y + 40 + 24, theme["text"], center_x=True, center_y=True)
-                draw_text("A: Confirm   B: Cancel", font_medium, pop_x + pop_w//2, pop_y + 120 + 16, theme["text_dim"], center_x=True, center_y=True)
+                sdlttf.TTF_SetFontStyle(font_large, sdlttf.TTF_STYLE_NORMAL)
+
+                draw_text("A: Confirm   B: Cancel", font_medium, pop_x + pop_w//2, pop_y + 130 + 16, theme["text"], center_x=True, center_y=True)
 
             renderer.present()
             needs_redraw = False
