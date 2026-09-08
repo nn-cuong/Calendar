@@ -177,6 +177,49 @@ def main():
         sdl2.SDL_RenderCopy(renderer.sdlrenderer, tex, None, dest)
         return w, h
 
+    def draw_footer_badges(items, theme):
+        footer_h = 58
+        footer_y = 768 - footer_h
+        renderer.fill((0, footer_y, 1024, 2), theme["grid"])
+        badge_h = 32
+        baseline_y = footer_y + (footer_h - badge_h) // 2
+        pad_x = 7
+        gap_label = 6
+        gap_item = 14
+
+        measured = []
+        total_w = 0
+        sdlttf.TTF_SetFontStyle(font_small, sdlttf.TTF_STYLE_BOLD)
+        for key_name, label in items:
+            key_surf = sdlttf.TTF_RenderUTF8_Blended(font_small, key_name.encode('utf-8'), theme["text"])
+            kw = key_surf.contents.w if key_surf else 0
+            if key_surf: sdl2.SDL_FreeSurface(key_surf)
+            bw = max(badge_h, kw + pad_x * 2)
+
+            lbl_surf = sdlttf.TTF_RenderUTF8_Blended(font_small, label.encode('utf-8'), theme["text_dim"])
+            lw = lbl_surf.contents.w if lbl_surf else 0
+            if lbl_surf: sdl2.SDL_FreeSurface(lbl_surf)
+
+            measured.append((key_name, label, bw, lw))
+            total_w += bw + gap_label + lw + gap_item
+        sdlttf.TTF_SetFontStyle(font_small, sdlttf.TTF_STYLE_NORMAL)
+
+        if len(items) > 0:
+            total_w -= gap_item
+
+        cur_x = (1024 - total_w) // 2 if total_w < 1024 - 32 else 16
+        for key_name, label, bw, lw in measured:
+            renderer.fill((cur_x, baseline_y, bw, badge_h), theme["grid"])
+            renderer.fill((cur_x + 1, baseline_y + 1, bw - 2, badge_h - 2), theme["bg"])
+
+            sdlttf.TTF_SetFontStyle(font_small, sdlttf.TTF_STYLE_BOLD)
+            draw_text(key_name, font_small, cur_x + bw // 2, baseline_y + badge_h // 2, theme["text"], center_x=True, center_y=True)
+            sdlttf.TTF_SetFontStyle(font_small, sdlttf.TTF_STYLE_NORMAL)
+
+            lbl_x = cur_x + bw + gap_label
+            draw_text(label, font_small, lbl_x, baseline_y + badge_h // 2, theme["text_dim"], center_x=False, center_y=True)
+            cur_x += bw + gap_label + lw + gap_item
+
     def get_days_in_month(year, month):
         return 29 if month == 2 and year % 4 == 0 and (year % 100 != 0 or year % 400 == 0) else (28 if month == 2 else (30 if month in (4, 6, 9, 11) else 31))
 
@@ -532,9 +575,17 @@ def main():
                         draw_text(sec_str, sec_font, bx + cell_w//2, sec_y, sec_color, center_x=True, center_y=True)
 
             # Footer
-            mode_str = "[Solar]" if view_mode == MODE_SOLAR else "[Lunar]"
-            footer = f"L/R: Month | L2/R2: Year | DPAD: Move | X: {mode_str} | Y: Theme | A: Today | START: Exit"
-            draw_text(footer, font_small, 20, w_h - 40, theme["text_dim"])
+            mode_str = "Solar" if view_mode == MODE_SOLAR else "Lunar"
+            footer_items = [
+                ("START", "Exit"),
+                ("A", "Today"),
+                ("DPAD", "Move"),
+                ("L1/R1", "Month"),
+                ("L2/R2", "Year"),
+                ("X", mode_str),
+                ("Y", "Theme"),
+            ]
+            draw_footer_badges(footer_items, theme)
 
             if show_quit_confirm:
                 sdl2.SDL_SetRenderDrawBlendMode(renderer.sdlrenderer, sdl2.SDL_BLENDMODE_BLEND)
