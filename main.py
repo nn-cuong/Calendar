@@ -579,7 +579,6 @@ def main():
             footer_items = [
                 ("START", "Exit"),
                 ("A", "Today"),
-                ("DPAD", "Move"),
                 ("L1/R1", "Month"),
                 ("L2/R2", "Year"),
                 ("X", mode_str),
@@ -602,7 +601,39 @@ def main():
                 draw_text("Exit Calendar?", font_large, pop_x + pop_w//2, pop_y + 40 + 24, theme["text"], center_x=True, center_y=True)
                 sdlttf.TTF_SetFontStyle(font_large, sdlttf.TTF_STYLE_NORMAL)
 
-                draw_text("A: Confirm   B: Cancel", font_medium, pop_x + pop_w//2, pop_y + 130 + 16, theme["text"], center_x=True, center_y=True)
+                # Retro Arcade 3D Beveled Keycaps: [A] Confirm   [B] Cancel
+                key_w, key_h = 44, 40
+                gap_label = 12
+                gap_group = 56
+
+                sdlttf.TTF_SetFontStyle(font_medium, sdlttf.TTF_STYLE_BOLD)
+                law, lah = draw_text("Confirm", font_medium, 0, 0, theme["text"], center_x=False, center_y=False)
+                lbw, lbh = draw_text("Cancel", font_medium, 0, 0, theme["text"], center_x=False, center_y=False)
+                sdlttf.TTF_SetFontStyle(font_medium, sdlttf.TTF_STYLE_NORMAL)
+
+                group_a_w = key_w + gap_label + law
+                group_b_w = key_w + gap_label + lbw
+                total_w = group_a_w + gap_group + group_b_w
+                start_x = pop_x + (pop_w - total_w) // 2
+                row_y = pop_y + 120
+
+                # 1. Hardware Keycap [A] (Retro Crimson / Ruby with 3D Bevel)
+                ka_x = start_x
+                renderer.fill((ka_x, row_y + 4, key_w, key_h), sdl2.ext.Color(95, 30, 32))
+                renderer.fill((ka_x, row_y, key_w, key_h - 4), sdl2.ext.Color(168, 50, 55))
+                renderer.fill((ka_x + 2, row_y + 2, key_w - 4, 3), sdl2.ext.Color(210, 85, 90))
+                sdlttf.TTF_SetFontStyle(font_medium, sdlttf.TTF_STYLE_BOLD)
+                draw_text("A", font_medium, ka_x + key_w // 2, row_y + (key_h - 4) // 2 + 1, sdl2.SDL_Color(255, 255, 255, 255), center_x=True, center_y=True)
+                draw_text("Confirm", font_medium, ka_x + key_w + gap_label, row_y + (key_h - lah) // 2 + 1, theme["text"], center_x=False, center_y=False)
+
+                # 2. Hardware Keycap [B] (Muted Slate / Gray with 3D Bevel)
+                kb_x = ka_x + group_a_w + gap_group
+                renderer.fill((kb_x, row_y + 4, key_w, key_h), sdl2.ext.Color(45, 50, 58))
+                renderer.fill((kb_x, row_y, key_w, key_h - 4), sdl2.ext.Color(85, 95, 108))
+                renderer.fill((kb_x + 2, row_y + 2, key_w - 4, 3), sdl2.ext.Color(120, 132, 148))
+                draw_text("B", font_medium, kb_x + key_w // 2, row_y + (key_h - 4) // 2 + 1, sdl2.SDL_Color(255, 255, 255, 255), center_x=True, center_y=True)
+                draw_text("Cancel", font_medium, kb_x + key_w + gap_label, row_y + (key_h - lbh) // 2 + 1, theme["text"], center_x=False, center_y=False)
+                sdlttf.TTF_SetFontStyle(font_medium, sdlttf.TTF_STYLE_NORMAL)
 
             renderer.present()
             needs_redraw = False
